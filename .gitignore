@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.pyo
+
+exnv/
+
+
+.env
+
+*.sqlite3
+
+*.xlsx
+*.xls
+

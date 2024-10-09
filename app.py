@@ -2,13 +2,15 @@ from flask import Flask, jsonify, request, render_template
 from flask_marshmallow import Marshmallow
 from openpyxl import load_workbook
 from flask_sqlalchemy import SQLAlchemy
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 app = Flask(__name__)
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
 
-app.config["SQLALCHEMY_DATABASE_URI"] = (
-    "postgresql://postgres:sarfu%4099@localhost/cmex"
-)
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
@@ -38,26 +40,36 @@ def home():
     return render_template("index.html")
 
 
+@app.route("/show", methods=["GET"])
+def show_users():
+    forms = Formulas.query.all()
+    return render_template("view.html", forms=forms)
+
+
 @app.route("/add", methods=["POST"])
 def add_data():
     if request.method == "POST":
         exc_data = request.files["formula"]
-        print(exc_data) 
 
-        Mydata = load_workbook(exc_data)
-        Newdata = Mydata.active
+        if not exc_data.filename.endswith(".xlsx"):
+            return "Error: Please upload an Excel file."
 
-        headers = [
-            cell.value for cell in Newdata[1]
-        ]  
-        print("Headers:", headers)
+        try:
+            print(exc_data)
 
-        for row in Newdata.iter_rows(min_row=2, values_only=True):
-            print("Row Data:", row)  
-            data = Formulas(id=row[0], name=row[1], formula=row[2])
-            db.session.add(data)
+            Mydata = load_workbook(exc_data)
+            Newdata = Mydata.active
 
-        db.session.commit()  
+            for row in Newdata.iter_rows(min_row=2, values_only=True):
+                # print("Row Data:", row)
+                data = Formulas(id=row[0], name=row[1], formula=row[2])
+                db.session.add(data)
+
+            db.session.commit()
+
+        except Exception as e:
+            return f"Error occurred while processing the file: {str(e)}"
+
     return "message : Data retrieved"
 
 
